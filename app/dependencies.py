@@ -1,5 +1,5 @@
 import jwt
-from typing import Annotated, OrderedDict
+from typing import Annotated
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from fastapi import Depends
@@ -7,28 +7,11 @@ from fastapi.security import SecurityScopes, OAuth2PasswordBearer
 
 from app.db.base import GlobalSessionLocal
 from app.core.config import settings
+from app.helpers.cache import LRUCache
 from app.modules.user.models import TokenData, UserMailModel
 from app.exceptions import CredentialsException
 
-# LRU Cache for the database engines
-class EngineCache(OrderedDict):
-    def __init__(self, capacity: int):
-        self.capacity = capacity
-        super().__init__()
-        
-    def __getitem__(self, key):
-        value = super().__getitem__(key)
-        self.move_to_end(key)
-        return value
-    
-    def __setitem__(self, key, value):
-        if key in self:
-            self.move_to_end(key)
-        super().__setitem__(key, value)
-        if len(self) > self.capacity:
-            self.popitem(last=False)   
-        
-engine_cache = EngineCache(settings.engine_cache_capacity)
+engine_cache = LRUCache(settings.engine_cache_capacity)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login", scopes=settings.user_roles_description)
 
 def get_global_db():
