@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.exceptions import UserAlreadyExists, UserNotFound, InvalidPassword, RoleNotAssignable
 from app.core.config import settings
 from app.modules.user.schemas import UserSchema
-from app.modules.user.models import UserRegisterModel, UserLoginModel, UserBaseModel, UserUpdateModel, UserMailModel, UserUpdateRoleModel
+from app.modules.user.models import UserRegisterModel, UserLoginModel, UserBaseModel, UserNamesModel, UserMailModel, UserUpdateRoleModel
 
 def _get_hashed_password(password: str) -> str:
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
@@ -48,14 +48,12 @@ def create_user(db: Session, user: UserRegisterModel) -> UserBaseModel:
     db.refresh(db_user)
     return UserBaseModel(**db_user.__dict__)      
 
-def update_user(db: Session, current_user: UserMailModel, updated_user: UserUpdateModel) -> UserBaseModel:
+def update_user_names(db: Session, current_user: UserMailModel, updated_user: UserNamesModel) -> UserBaseModel:
     db_user = get_user_by_email(db, current_user.email)
     if not db_user:
         raise UserNotFound()
     if updated_user.first_name: db_user.first_name = updated_user.first_name
     if updated_user.last_name: db_user.last_name = updated_user.last_name
-    if updated_user.email: db_user.email = updated_user.email
-    if updated_user.password: db_user.hashed_password = _get_hashed_password(updated_user.password)
     db.commit()
     db.refresh(db_user)
     return UserBaseModel(**db_user.__dict__)

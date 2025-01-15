@@ -1,5 +1,4 @@
-from typing import Optional
-from pydantic import BaseModel, Field, EmailStr, SecretStr
+from pydantic import BaseModel, Field, EmailStr
 from app.core.config import settings
 
 class UserRegisterModel(BaseModel):
@@ -18,15 +17,9 @@ class UserLoginModel(BaseModel):
         description="Password must meet complexity requirements"
     )
 
-class UserUpdateModel(BaseModel):
+class UserNamesModel(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
-    email: EmailStr | None = None
-    password: str | None = Field(
-        pattern=settings.user_password_regex,
-        description="Password must meet complexity requirements",
-        default=None
-    )
     
 class UserUpdateRoleModel(BaseModel):
     email: EmailStr

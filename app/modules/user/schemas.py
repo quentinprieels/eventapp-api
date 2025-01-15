@@ -1,11 +1,9 @@
-# User schema: describes the structure of a User in the database
-
 from sqlalchemy import Column, Integer, String, Enum, ARRAY
 
-from app.db.base import Base
+from app.db.base import GlobalBase
 from app.core.config import settings
 
-class UserSchema(Base):
+class UserSchema(GlobalBase):
     """
     Define the User schema
     A user is a person who has an account on the platform.

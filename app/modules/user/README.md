@@ -1,0 +1,21 @@
+# User Module
+
+This module is responsible for handling user related operations.
+
+## TODO's
+
+### Security
+
+- [ ] Secure the fact that only the user can update his **own** data
+- [ ] Implement a 2 way role system:
+  - one role in the user database for the instance managing (create new events, delete events, etc)
+  - one role for each user in each event to manage the event (update event, delete event, etc)
+- [ ] Storing the current user token in the database and invalidating it when the user logs out or when the timedeltas are expired
+- [ ] Implement a way to blacklist tokens if the user has modified his email or if his roles have changed
+
+### Functionality
+
+- [ ] Implement the way the password is updated by having a separate endpoint for it and checking the old password
+- [ ] Implement the way the email is updated by checking if the email is already in use and invalidate the user session if it is
+- [ ] Implement the user deletion functionality
+- [ ] Implement a way to store the user's profile picture in the database
