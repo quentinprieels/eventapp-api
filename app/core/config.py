@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     
     # Database settings
     database_url: str                           # See .env file for more details
+    database_name: str = "eventapp"
+    engine_cache_capacity: int = 10
     
     # JWT settings
     jwt_secret_key: str                         # See .env file for more details

@@ -1,14 +1,14 @@
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 
-from app.db.database import init_db, close_db
+from app.db.database import init_global_db, close_all_db
 from app.modules.user.router import router as user_router
 from app.core.config import settings
 
 async def lifespan(app: FastAPI):
-    init_db()
+    init_global_db()
     yield
-    close_db()
+    close_all_db()
 
 app = FastAPI(lifespan=lifespan)
 

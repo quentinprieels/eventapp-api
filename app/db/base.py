@@ -4,8 +4,11 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
 
-# Create a SQLAlchemy engine
-SQLALCHEMY_DATABASE_URL = settings.database_url
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+# Global database connection
+SQLALCHEMY_DATABASE_URL = f"{settings.database_url}/{settings.database_name}"
+global_engine = create_engine(SQLALCHEMY_DATABASE_URL)
+GlobalSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=global_engine)
+
+# Base model for all database models
+GlobalBase = declarative_base()
+EventBase = declarative_base()

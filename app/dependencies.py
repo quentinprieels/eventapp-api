@@ -1,25 +1,62 @@
 import jwt
-from typing import Annotated
-from sqlalchemy.orm import Session
+from typing import Annotated, OrderedDict
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
 from fastapi import Depends
 from fastapi.security import SecurityScopes, OAuth2PasswordBearer
 
-from app.db.base import SessionLocal
+from app.db.base import GlobalSessionLocal
 from app.core.config import settings
 from app.modules.user.models import TokenData, UserMailModel
 from app.exceptions import CredentialsException
-from app.modules.user.crud import get_user_by_email
 
+# LRU Cache for the database engines
+class EngineCache(OrderedDict):
+    def __init__(self, capacity: int):
+        self.capacity = capacity
+        super().__init__()
+        
+    def __getitem__(self, key):
+        value = super().__getitem__(key)
+        self.move_to_end(key)
+        return value
+    
+    def __setitem__(self, key, value):
+        if key in self:
+            self.move_to_end(key)
+        super().__setitem__(key, value)
+        if len(self) > self.capacity:
+            self.popitem(last=False)   
+        
+engine_cache = EngineCache(settings.engine_cache_capacity)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login", scopes=settings.user_roles_description)
 
-def get_db():
-    db = SessionLocal()
+def get_global_db():
+    db = GlobalSessionLocal()
     try:
         yield db
     finally:
         db.close()
+
+def get_event_db(event_db_name: str, db: Session = Depends(get_global_db)):
+    # Cache the engine for the event database
+    if event_db_name not in engine_cache:
+        # Check if the event database exists
+        # TODO: Implement this
         
-async def get_current_user(security_scopes: SecurityScopes, token: Annotated[str, Depends(oauth2_scheme)], db: Session = Depends(get_db)) -> UserMailModel:
+        # Get the connection to the event database
+        event_db_url = f"{settings.database_url}/{event_db_name}"
+        event_engine = create_engine(event_db_url)
+        engine_cache[event_db_name] = sessionmaker(autocommit=False, autoflush=False, bind=event_engine)
+        
+    # Get the session to the event database
+    event_db = engine_cache[event_db_name]()
+    try:
+        yield event_db
+    finally:
+        event_db.close()
+        
+async def get_current_user(security_scopes: SecurityScopes, token: Annotated[str, Depends(oauth2_scheme)]) -> UserMailModel:
     # Format the scopes
     if security_scopes.scopes:
         authenticate_value = f"Bearer scope={security_scopes.scopes}"
