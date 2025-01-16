@@ -1,16 +1,46 @@
-from fastapi import FastAPI
+import logging
+from logging.handlers import RotatingFileHandler
+from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 
 from app.db.database import init_global_db, close_all_db
 from app.modules.user.router import router as user_router
 from app.core.config import settings
+from app.helpers.logs import StructuredLogger
 
+# Logging configuration
+logging.setLoggerClass(StructuredLogger)
+logger = logging.getLogger(__name__)
+handler = RotatingFileHandler("app.log", maxBytes=100000, backupCount=3)
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
+
+# Lifespan events
 async def lifespan(app: FastAPI):
     init_global_db()
+    with open("app.log", "w"):  # Clear the log file
+        pass
     yield
     close_all_db()
 
+# FastAPI application
 app = FastAPI(lifespan=lifespan)
+
+##############
+# MIDDLEWARE #
+##############
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    response = await call_next(request)
+    logger.info({
+        "event": "request",
+        "method": request.method,
+        "url": str(request.url),
+        "headers": dict(request.headers),
+        "client": request.client.host,
+        "response_code": response.status_code,
+    })
+    return response
 
 ##########
 # ROUTES #
