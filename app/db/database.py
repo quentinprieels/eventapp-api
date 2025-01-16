@@ -31,3 +31,17 @@ def create_and_init_event_db(event_db_name: str):
     event_engine = create_engine(event_db_url)
     EventBase.metadata.create_all(bind=event_engine)
     event_engine.dispose()
+    
+def delete_event_db(event_db_name: str):
+    global_db_url = f"{settings.database_url}/{settings.database_name}"
+    
+    # Enshure the database is closed
+    if event_db_name in engine_cache:
+        engine_cache[event_db_name].dispose()
+    
+    # Database deletion
+    conn = psycopg2.connect(global_db_url)
+    conn.autocommit = True
+    with conn.cursor() as cur:
+        cur.execute(f"DROP DATABASE {event_db_name}")
+    conn.close()

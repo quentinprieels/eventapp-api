@@ -15,4 +15,8 @@ class LRUCache(OrderedDict):
             self.move_to_end(key)
         super().__setitem__(key, value)
         if len(self) > self.capacity:
-            self.popitem(last=False)   
+            removed_item = self.popitem(last=False)
+            
+            # Disppose removed item to free resources
+            if hasattr(removed_item[1], "dispose"):
+                removed_item[1].dispose()
