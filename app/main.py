@@ -11,7 +11,7 @@ from app.helpers.logs import StructuredLogger
 # Logging configuration
 logging.setLoggerClass(StructuredLogger)
 logger = logging.getLogger(__name__)
-handler = RotatingFileHandler("app.log", maxBytes=100000, backupCount=3)
+handler = RotatingFileHandler(settings.log_file, maxBytes=settings.log_max_size, backupCount=settings.log_backup_count)
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
