@@ -1,5 +1,6 @@
 import jwt
 from typing import Annotated
+from minio import Minio
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from fastapi import Depends
@@ -38,6 +39,15 @@ def get_event_db(event_db_name: str, db: Session = Depends(get_global_db)):
         yield event_db
     finally:
         event_db.close()
+        
+def get_minio_db():
+    minio_client = Minio(
+        endpoint=settings.minio_endpoint,
+        access_key=settings.minio_access_key,
+        secret_key=settings.minio_secret_key,
+        secure=settings.minio_secure,
+    )
+    return minio_client
         
 async def get_current_user(security_scopes: SecurityScopes, token: Annotated[str, Depends(oauth2_scheme)]) -> UserMailModel:
     # Format the scopes

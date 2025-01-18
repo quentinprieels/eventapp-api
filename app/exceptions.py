@@ -23,3 +23,12 @@ class CredentialsException(HTTPException):
 class RoleNotAssignable(HTTPException):
     def __init__(self, detail: str = ""):
         super().__init__(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail)
+        
+class InvalidImage(HTTPException):
+    def __init__(self, detail: str = ""):
+        detail_str = f"Invalid image file. {detail}"
+        super().__init__(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail_str)
+
+class ImageNotFound(HTTPException):
+    def __init__(self):
+        super().__init__(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found.")

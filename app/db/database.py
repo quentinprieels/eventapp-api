@@ -3,8 +3,9 @@ from sqlalchemy import create_engine
 
 from app.core.config import settings
 from app.db.base import global_engine, GlobalBase, EventBase
-from app.dependencies import engine_cache
+from app.dependencies import engine_cache, get_minio_db
 
+# Postgres database
 def init_global_db():
     GlobalBase.metadata.create_all(bind=global_engine)
 
@@ -45,3 +46,9 @@ def delete_event_db(event_db_name: str):
     with conn.cursor() as cur:
         cur.execute(f"DROP DATABASE {event_db_name}")
     conn.close()
+    
+# Minio database
+def init_minio_db():
+    minio_db = get_minio_db()
+    if not minio_db.bucket_exists(settings.minio_bucket_name):
+        minio_db.make_bucket(settings.minio_bucket_name)

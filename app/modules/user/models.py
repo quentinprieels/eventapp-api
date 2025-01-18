@@ -11,6 +11,7 @@ class UserBaseModel(BaseModel):
     last_name: str
     email: EmailStr
     roles: list
+    profile_picture_key: str | None = None
     
 class UserRegisterModel(BaseModel):
     first_name: str

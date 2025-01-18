@@ -3,7 +3,7 @@ from logging.handlers import RotatingFileHandler
 from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.responses import RedirectResponse
 
-from app.db.database import init_global_db, close_all_db
+from app.db.database import init_global_db, close_all_db, init_minio_db
 from app.modules.user.router import router as user_router
 from app.core.config import settings
 from app.helpers.logs import StructuredLogger
@@ -18,6 +18,7 @@ logger.setLevel(logging.INFO)
 # Lifespan events
 async def lifespan(app: FastAPI):
     init_global_db()
+    init_minio_db()
     with open("app.log", "w"):  # Clear the log file
         pass
     yield
@@ -33,7 +34,17 @@ app = FastAPI(lifespan=lifespan)
 async def log_requests(request: Request, call_next):
     response = await call_next(request)
     background_tasks = BackgroundTasks()
-    background_tasks.add_task(logger.info, {"event": "request", "method": request.method, "url": str(request.url), "headers": dict(request.headers), "client": request.client.host, "response_code": response.status_code})
+    background_tasks.add_task(
+        logger.info, 
+        {
+            "event": "request",
+            "method": request.method, 
+            "url": str(request.url), 
+            "headers": dict(request.headers), 
+            "client": request.client.host, "response_code": response.status_code
+        }
+    )
+    response.background = background_tasks
     return response
 
 ##########

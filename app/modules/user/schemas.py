@@ -16,6 +16,7 @@ class UserSchema(GlobalBase):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     roles = Column(ARRAY(Enum(*settings.user_roles, name="role")), default=[settings.user_default_role])
+    profile_picture_key = Column(String, nullable=True, default=None)
     
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
