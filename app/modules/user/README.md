@@ -6,7 +6,7 @@ This module is responsible for handling user related operations.
 
 ### Security
 
-- [ ] Secure the fact that only the user can update his **own** data
+- [x] Secure the fact that only the user can update his **own** data
 - [ ] Implement a 2 way role system:
   - one role in the user database for the instance managing (create new events, delete events, etc.)
   - one role for each user in each event to manage the event (update event, delete event, etc.)
@@ -17,6 +17,9 @@ This module is responsible for handling user related operations.
 
 ### Functionality
 
+- [x] Implement the user registration functionality
+- [x] Implement the user login functionality
+- [x] Implement the user update of their first and last name
 - [x] Implement the way the password is updated by having a separate endpoint for it and checking the old password
 - [x] Implement the way the email is updated by checking if the email is already in use and invalidate the user session if it is
 - [x] Implement the user deletion functionality

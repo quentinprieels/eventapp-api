@@ -1,6 +1,6 @@
 import logging
 from logging.handlers import RotatingFileHandler
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.responses import RedirectResponse
 
 from app.db.database import init_global_db, close_all_db
@@ -32,14 +32,8 @@ app = FastAPI(lifespan=lifespan)
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     response = await call_next(request)
-    logger.info({
-        "event": "request",
-        "method": request.method,
-        "url": str(request.url),
-        "headers": dict(request.headers),
-        "client": request.client.host,
-        "response_code": response.status_code,
-    })
+    background_tasks = BackgroundTasks()
+    background_tasks.add_task(logger.info, {"event": "request", "method": request.method, "url": str(request.url), "headers": dict(request.headers), "client": request.client.host, "response_code": response.status_code})
     return response
 
 ##########
