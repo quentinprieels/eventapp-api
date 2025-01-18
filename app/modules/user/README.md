@@ -17,7 +17,8 @@ This module is responsible for handling user related operations.
 
 ### Functionality
 
-- [ ] Implement the way the password is updated by having a separate endpoint for it and checking the old password
-- [ ] Implement the way the email is updated by checking if the email is already in use and invalidate the user session if it is
-- [ ] Implement the user deletion functionality
+- [x] Implement the way the password is updated by having a separate endpoint for it and checking the old password
+- [x] Implement the way the email is updated by checking if the email is already in use and invalidate the user session if it is
+- [x] Implement the user deletion functionality
 - [ ] Implement a way to store the user's profile picture in the database
+- [ ] Implement a user email verification process when the user registers

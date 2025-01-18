@@ -1,25 +1,37 @@
 from pydantic import BaseModel, Field, EmailStr
 from app.core.config import settings
 
+password_field = Field(
+    pattern=settings.user_password_regex,
+    description="Password must meet complexity requirements"
+)
+
+class UserBaseModel(BaseModel):
+    first_name: str
+    last_name: str
+    email: EmailStr
+    roles: list
+    
 class UserRegisterModel(BaseModel):
     first_name: str
     last_name: str
     email: EmailStr
-    password: str = Field(
-        pattern=settings.user_password_regex,
-        description="Password must meet complexity requirements"
-    )
+    password: str = password_field
 
 class UserLoginModel(BaseModel):
     email: EmailStr
-    password: str = Field(
-        pattern=settings.user_password_regex,
-        description="Password must meet complexity requirements"
-    )
+    password: str = password_field
 
 class UserNamesModel(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
+    
+class UserMailModel(BaseModel):
+    email: EmailStr
+    
+class UserUpdatePasswordModel(BaseModel):
+    current_password: str = password_field
+    new_password: str = password_field
     
 class UserUpdateRoleModel(BaseModel):
     email: EmailStr
@@ -35,15 +47,6 @@ class UserUpdateRoleModel(BaseModel):
     @classmethod
     def __get_validators__(cls):
         yield cls.validate_roles
-
-class UserBaseModel(BaseModel):
-    first_name: str
-    last_name: str
-    email: EmailStr
-    roles: list
-    
-class UserMailModel(BaseModel):
-    email: EmailStr
 
 class TokenBase(BaseModel):
     access_token: str
