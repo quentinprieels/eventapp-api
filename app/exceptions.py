@@ -32,3 +32,7 @@ class InvalidImage(HTTPException):
 class ImageNotFound(HTTPException):
     def __init__(self):
         super().__init__(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found.")
+        
+class InvalidRole(HTTPException):
+    def __init__(self):
+        super().__init__(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid role.")

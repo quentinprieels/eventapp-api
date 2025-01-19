@@ -1,4 +1,14 @@
+import csv
 from pydantic_settings import BaseSettings
+
+def _get_global_roles_and_descriptions_from_csv(file_path) -> dict:
+    global_roles = {}
+    with open(file_path, mode='r') as file:
+        csv_reader = csv.DictReader(file)
+        for row in csv_reader:
+            if row['categorie'] == 'global':
+                global_roles[row['name']] = row['description']
+    return global_roles
 
 class Settings(BaseSettings):
     # Application settings
@@ -27,13 +37,10 @@ class Settings(BaseSettings):
     jwt_expiration: int = 3600 * 6 # 6 hours
     jwt_algorithm: str = "HS256" # HMAC-SHA256
     
-    # User settings
-    user_roles_description: dict = {
-        "admin": "Administrator",
-        "user": "User"
-    }
-    user_roles : list = list(user_roles_description.keys())
-    user_default_role: str = "user"
+    # User global roles settings
+    roles_csv_path: str = "../resources/roles.csv"
+    
+    # User password settings
     user_password_regex :str = r"^[A-Za-z\d@$!%*?&]{8,64}$" # Between 8 and 64 characters with at least one letter, one number and one special character
     user_profile_picture_max_size: int = 5 * 1024 * 1024  # 5 MB
     

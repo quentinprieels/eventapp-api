@@ -13,7 +13,7 @@ from app.modules.user.models import TokenData, UserMailModel
 from app.exceptions import CredentialsException
 
 engine_cache = LRUCache(settings.engine_cache_capacity)
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login", scopes=settings.user_roles_description)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
 
 def get_global_db():
     db = GlobalSessionLocal()
@@ -53,6 +53,9 @@ async def get_current_user(security_scopes: SecurityScopes, token: Annotated[str
     # Format the scopes
     if security_scopes.scopes:
         authenticate_value = f"Bearer scope={security_scopes.scopes}"
+        
+    # Add the "global:user" scope in the list of required scopes
+    security_scopes.scopes.append("global:user")
     
     # Decode the token and check if it is valid
     try:

@@ -13,6 +13,7 @@ from app.exceptions import UserAlreadyExists, UserNotFound, InvalidPassword, Rol
 from app.core.config import settings
 from app.modules.user.schemas import UserSchema
 from app.modules.user.models import UserBaseModel, UserRegisterModel, UserLoginModel, UserNamesModel, UserMailModel, UserUpdatePasswordModel, UserUpdateRoleModel
+import app.modules.role.crud as role_crud
 
 # Password hashing and verification
 def _get_hashed_password(password: str) -> str:
@@ -20,6 +21,13 @@ def _get_hashed_password(password: str) -> str:
 
 def _verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+
+# User global roles management
+def _is_last_admin(db: Session, user: UserBaseModel) -> bool:
+    if user.role == role_crud.get_default_admin_role(db).name:
+        if db.query(UserSchema).filter(UserSchema.role == role_crud.get_default_admin_role(db).name).count() == 1:
+            return True
+    return False
 
 # JWT token creation
 def create_access_token(data: dict, expires_delta: timedelta) -> str:
@@ -30,24 +38,23 @@ def create_access_token(data: dict, expires_delta: timedelta) -> str:
 
 # User getters and setters
 def get_user_by_email(db: Session, email: str) -> UserSchema:
-    db_user = db.query(UserSchema).filter(UserSchema.email == email).first()
+    return db.query(UserSchema).filter(UserSchema.email == email).first()
+
+def get_and_check_user_by_email(db: Session, email: str) -> UserSchema:
+    db_user = get_user_by_email(db, email)
     if not db_user:
         raise UserNotFound()
     return db_user
 
 def get_user_profile_picture(db: Session, minio_db: Minio, current_user: UserMailModel) -> UploadFile:
-    db_user = get_user_by_email(db, current_user.email)
-    if not db_user:
-        raise UserNotFound()
+    db_user = get_and_check_user_by_email(db, current_user.email)
     if not db_user.profile_picture_key:
         raise ImageNotFound()
     profile_picture = minio_db.get_object(settings.minio_bucket_name, db_user.profile_picture_key)
     return StreamingResponse(profile_picture, media_type=profile_picture.headers.get("Content-Type"))
 
 def update_user_names(db: Session, current_user: UserMailModel, updated_user: UserNamesModel) -> UserBaseModel:
-    db_user = get_user_by_email(db, current_user.email)
-    if not db_user:
-        raise UserNotFound()
+    db_user = get_and_check_user_by_email(db, current_user.email)
     if updated_user.first_name: db_user.first_name = updated_user.first_name
     if updated_user.last_name: db_user.last_name = updated_user.last_name
     db.commit()
@@ -64,9 +71,7 @@ async def update_user_profile_picture(db: Session, minio_db: Minio, current_user
         raise InvalidImage("Image file too large")
     
     # Update the user's profile picture
-    db_user = get_user_by_email(db, current_user.email)
-    if not db_user:
-        raise UserNotFound()
+    db_user = get_and_check_user_by_email(db, current_user.email)
     
     # Process the image
     try:
@@ -88,9 +93,7 @@ async def update_user_profile_picture(db: Session, minio_db: Minio, current_user
     return UserBaseModel(**db_user.__dict__)
 
 def update_user_email(db: Session, current_user: UserMailModel, updated_user: UserMailModel) -> UserBaseModel:
-    db_user = get_user_by_email(db, current_user.email)
-    if not db_user:
-        raise UserNotFound()
+    db_user = get_and_check_user_by_email(db, current_user.email)
     db_user_with_same_new_email = get_user_by_email(db, updated_user.email)
     if db_user_with_same_new_email:
         raise UserAlreadyExists()
@@ -100,9 +103,7 @@ def update_user_email(db: Session, current_user: UserMailModel, updated_user: Us
     return UserBaseModel(**db_user.__dict__)
 
 def update_user_password(db: Session, current_user: UserMailModel, updated_user: UserUpdatePasswordModel) -> UserBaseModel:
-    db_user = get_user_by_email(db, current_user.email)
-    if not db_user:
-        raise UserNotFound()
+    db_user = get_and_check_user_by_email(db, current_user.email)
     if not _verify_password(updated_user.current_password, db_user.hashed_password):
         raise InvalidPassword()
     db_user.hashed_password = _get_hashed_password(updated_user.new_password)
@@ -110,18 +111,17 @@ def update_user_password(db: Session, current_user: UserMailModel, updated_user:
     db.refresh(db_user)
     return UserBaseModel(**db_user.__dict__)
 
-def update_user_roles(db: Session, update_roles_user: UserUpdateRoleModel) -> UserBaseModel:   
-    db_user = get_user_by_email(db, update_roles_user.email)
-    if not db_user:
-        raise UserNotFound()
+def update_user_role(db: Session, update_role_user: UserUpdateRoleModel) -> UserBaseModel:   
+    db_user = get_and_check_user_by_email(db, update_role_user.email)
+    
+    # Check that the new role is a valid global role
+    role_crud.get_global_role_by_name(db, update_role_user.role)
     
     # Do not allow a solitary admin to remove his role
-    if "admin" not in update_roles_user.roles:
-        if "admin" in db_user.roles:
-            if db.query(UserSchema).filter(UserSchema.roles.any("admin")).count() == 1:
-                raise RoleNotAssignable("At least one user must have the 'admin' role")
-        
-    db_user.roles = update_roles_user.roles
+    if _is_last_admin(db, db_user) and "admin" not in update_role_user.role:
+        raise RoleNotAssignable("At least one user must have the 'admin' role")
+    
+    db_user.role = update_role_user.role
     db.commit()
     db.refresh(db_user)
     return UserBaseModel(**db_user.__dict__)
@@ -135,11 +135,11 @@ def create_user(db: Session, user: UserRegisterModel) -> UserBaseModel:
         last_name=user.last_name,
         email=user.email,
         hashed_password=_get_hashed_password(user.password),
-        roles=[settings.user_default_role]
+        role=role_crud.get_default_global_role(db).name
     )
-    # If the first user is created, assign all roles to him
+    # If the first user is created, assign the default admin role
     if not db.query(UserSchema).count():
-        db_user.roles = settings.user_roles
+        db_user.role = role_crud.get_default_admin_role(db).name
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -147,23 +147,18 @@ def create_user(db: Session, user: UserRegisterModel) -> UserBaseModel:
 
 # User authentication
 def login_user(db: Session, user: UserLoginModel) -> UserBaseModel:
-    db_user = get_user_by_email(db, user.email)
-    if not user:
-        raise UserNotFound()
+    db_user = get_and_check_user_by_email(db, user.email)
     if not _verify_password(user.password, db_user.hashed_password):
         raise InvalidPassword()
     return UserBaseModel(**db_user.__dict__)
 
 # User deletion
 def delete_user(db: Session, minio_db: Minio, current_user: UserMailModel) -> UserBaseModel:
-    db_user = get_user_by_email(db, current_user.email)
-    if not db_user:
-        raise UserNotFound()
+    db_user = get_and_check_user_by_email(db, current_user.email)
     
     # Chek that the user is not the last admin
-    if "admin" in db_user.roles:
-        if db.query(UserSchema).filter(UserSchema.roles.any("admin")).count() == 1:
-            raise RoleNotAssignable("At least one user must have the 'admin' role")
+    if _is_last_admin(db, db_user):
+        raise RoleNotAssignable("At least one user must have the 'admin' role")
     
     # Delete the user's profile picture
     if db_user.profile_picture_key:

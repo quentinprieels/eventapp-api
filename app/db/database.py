@@ -1,9 +1,11 @@
 import psycopg2
+import csv
 from sqlalchemy import create_engine
 
 from app.core.config import settings
-from app.db.base import global_engine, GlobalBase, EventBase
+from app.db.base import global_engine, GlobalBase, EventBase, GlobalSessionLocal
 from app.dependencies import engine_cache, get_minio_db
+from app.modules.role.schemas import RoleSchema
 
 # Postgres database
 def init_global_db():
@@ -46,6 +48,32 @@ def delete_event_db(event_db_name: str):
     with conn.cursor() as cur:
         cur.execute(f"DROP DATABASE {event_db_name}")
     conn.close()
+    
+def load_roles_from_csv(roles_csv_path: str):
+    db = GlobalSessionLocal()
+    # Check if the roles table is empty
+    if db.query(RoleSchema).count():
+        return
+    
+    # Else, load the roles from the CSV file
+    with open(roles_csv_path, newline='', encoding='utf-8-sig') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            role = RoleSchema(
+                id=int(row["id"]),
+                categorie=row["categorie"],
+                name=row["name"],
+                parent_id=row["parent_id"] if row["parent_id"] else None,
+                default_global=bool(int(row["default_global"])),
+                default_event=bool(int(row["default_event"])),
+                default_admin=bool(int(row["default_admin"])),
+                description=row["description"],
+                access=row["access"]
+            )
+            db.add(role)
+            db.commit()
+            db.refresh(role)
+    db.close()
     
 # Minio database
 def init_minio_db():

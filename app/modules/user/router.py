@@ -9,8 +9,10 @@ from fastapi.responses import StreamingResponse
 
 from app.core.config import settings
 import app.modules.user.crud as user_crud
+import app.modules.role.crud as role_crud
 from app.modules.user.models import UserBaseModel, UserRegisterModel, UserLoginModel, UserNamesModel, UserMailModel, UserUpdatePasswordModel, UserUpdateRoleModel, TokenBase
 from app.dependencies import get_global_db, get_minio_db, get_current_user
+from app.exceptions import UserNotFound
 
 router = APIRouter(
     prefix="/users",
@@ -20,8 +22,8 @@ router = APIRouter(
 # User information routes
 @router.get("/me")
 def read_users_me(current_user: Annotated[UserMailModel, Depends(get_current_user)], db: Annotated[Session, Depends(get_global_db)]) -> UserBaseModel:
-    return user_crud.get_user_by_email(db, current_user.email)
-
+    return user_crud.get_and_check_user_by_email(db, current_user.email)
+    
 @router.get("/profile_picture")
 def read_user_profile_picture(current_user: Annotated[UserMailModel, Depends(get_current_user)], db: Annotated[Session, Depends(get_global_db)], minio_db: Annotated[Minio, Depends(get_minio_db)]) -> StreamingResponse:
     return user_crud.get_user_profile_picture(db, minio_db, current_user)
@@ -44,8 +46,8 @@ def update_user_password(updated_user: UserUpdatePasswordModel, current_user: An
     return user_crud.update_user_password(db, current_user, updated_user)
 
 @router.put("/update/roles")
-def update_user_roles(updated_user: UserUpdateRoleModel, current_user: Annotated[UserMailModel, Security(get_current_user, scopes=["admin"])],  db: Annotated[Session, Depends(get_global_db)]) -> UserBaseModel:
-    return user_crud.update_user_roles(db, updated_user)
+def update_user_role(updated_user: UserUpdateRoleModel, current_user: Annotated[UserMailModel, Security(get_current_user, scopes=["global:super_admin"])],  db: Annotated[Session, Depends(get_global_db)]) -> UserBaseModel:
+    return user_crud.update_user_role(db, updated_user)
 
 @router.put("/update/profile_picture")
 async def update_user_profile_picture(profile_picture: UploadFile, current_user: Annotated[UserMailModel, Depends(get_current_user)], db: Annotated[Session, Depends(get_global_db)], minio_db: Annotated[Minio, Depends(get_minio_db)]) -> UserBaseModel:
@@ -63,7 +65,7 @@ def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Annota
     
     # Create the access token
     access_token_expires = timedelta(minutes=settings.jwt_expiration)
-    access_token_data = {"sub": user.email, "scopes": user.roles}
+    access_token_data = {"sub": user.email, "scopes": role_crud.get_user_global_roles_jwt_format(db, user.role)}
     access_token = user_crud.create_access_token(data=access_token_data,expires_delta=access_token_expires)
     return TokenBase(access_token=access_token, token_type="bearer")
 
