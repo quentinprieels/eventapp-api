@@ -12,33 +12,29 @@ This is the API for the EventApp project: a web application that allows users to
 
 ## Modules of each event
 
-### Inscriptions
+### Inscriptions v
 
 - **Tickets**: Module responsible for creating and managing tickets
 - **Registrations**: Module responsible for managing the registrations
 - **Food**: Module responsible for managing the food, like the diets of the participants
 - **Transports**: Module responsible for managing the transports, like the transports of the participants
 
-### Logistics
+### Logistics v
 
 - **Activities**: Module responsible for managing the activities
 - **Materials**: Module responsible for managing the materials
 - **Locations**: Module responsible for managing the locations and create a global map of the event
-
-### Human Resources
-
-- **Mission**: Module responsible for managing the missions (things to do during the event that can be asked to anyone, but that needs some instructions to be done)
 
 ### Finance
 
 - **Payments**: Module responsible for managing the payments
 - **Invoices**: Module responsible for managing the invoices (create financial prevision and indicates what comes in and what goes out)
 
-### Checkpoints
+### Checkpoints v
 
 - **Checkpoints**: Module responsible for managing the checkpoints (checkpoints could be applied to registration, transport, activities, materials, locations, etc)
 
-### Communication
+### Communication v
 
 - **Notes**: Module to create collaborative notes (like decisions, meetings resume, etc)
 - **Tasks**: Module to create tasks and assign them to users, along with a deadline and dependencies between tasks (to create a Gantt chart)
@@ -49,7 +45,7 @@ This is the API for the EventApp project: a web application that allows users to
 - **Players**: Module responsible for managing the players of the game (like the teams, the players, etc)
 - **Ranking**: Module responsible for managing the ranking of the game
 
-## Modules global to all events
+## Modules global to all events v
 
 - **Users**: Module responsible for managing the users
 - **Events**: Module responsible for managing the different events

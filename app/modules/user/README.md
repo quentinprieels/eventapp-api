@@ -7,7 +7,7 @@ This module is responsible for handling user related operations.
 ### Security
 
 - [x] Secure the fact that only the user can update his **own** data
-- [ ] Implement a 2 way role system:
+- [x] Implement a 2 way role system:
   - one role in the user database for the instance managing (create new events, delete events, etc.)
   - one role for each user in each event to manage the event (update event, delete event, etc.)
 

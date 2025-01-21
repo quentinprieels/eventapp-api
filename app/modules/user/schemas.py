@@ -1,7 +1,6 @@
-from sqlalchemy import Column, Integer, String, Enum, ARRAY
+from sqlalchemy import Column, Integer, String
 
 from app.db.base import GlobalBase
-from app.core.config import settings
 
 class UserSchema(GlobalBase):
     """

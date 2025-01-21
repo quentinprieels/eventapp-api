@@ -1,5 +1,4 @@
 from fastapi import HTTPException, status
-from app.core.config import settings
 
 class UserAlreadyExists(HTTPException):
     def __init__(self):

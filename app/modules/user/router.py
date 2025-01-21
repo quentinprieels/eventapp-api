@@ -12,8 +12,6 @@ import app.modules.user.crud as user_crud
 import app.modules.role.crud as role_crud
 from app.modules.user.models import UserBaseModel, UserRegisterModel, UserLoginModel, UserNamesModel, UserMailModel, UserUpdatePasswordModel, UserUpdateRoleModel, TokenBase
 from app.dependencies import get_global_db, get_minio_db, get_current_user
-from app.exceptions import UserNotFound
-
 router = APIRouter(
     prefix="/users",
     tags=["users"],
