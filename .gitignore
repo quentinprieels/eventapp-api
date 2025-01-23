@@ -4,6 +4,8 @@
 *.sqlite3
 eventapp-db/
 
+# Drawio
+*.drawio.bkp
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
