@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy.orm import relationship
 
 from app.db.base import GlobalBase
 
@@ -14,14 +15,8 @@ class UserSchema(GlobalBase):
     last_name = Column(String, index=True, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
-    role = Column(String, nullable=False)
     profile_picture_key = Column(String, nullable=True, default=None)
+    global_role_id = Column(Integer, ForeignKey("global_roles.id"), nullable=False)
     
-    def __str__(self):
-        return f"{self.first_name} {self.last_name}"
-    
-    def __repr__(self):
-        return f"<User {self.first_name} {self.last_name}>"
-    
-    def __eq__(self, other):
-        return self.email == other.email
+    global_role = relationship("GlobalRoleSchema", back_populates="users")
+    events_users_roles = relationship("EventUserRoleSchema", back_populates="user")

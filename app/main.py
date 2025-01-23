@@ -4,10 +4,12 @@ from logging.handlers import RotatingFileHandler
 from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.responses import RedirectResponse
 
-from app.db.database import init_global_db, close_all_db, init_minio_db, load_roles_from_csv
+from app.db.database import init_global_db, close_global_db, init_minio_db, load_roles_from_csv
 from app.modules.user.router import router as user_router
 from app.core.config import settings
 from app.helpers.logs import StructuredLogger
+
+from app.modules.event.schemas import *
 
 # Logging configuration
 logging.setLoggerClass(StructuredLogger)
@@ -22,9 +24,9 @@ async def lifespan(app: FastAPI):
     init_minio_db()
     with open("app.log", "w"):  # Clear the log file
         pass
-    load_roles_from_csv(settings.roles_csv_path)
+    load_roles_from_csv()
     yield
-    close_all_db()
+    close_global_db()
 
 # FastAPI application
 app = FastAPI(lifespan=lifespan,

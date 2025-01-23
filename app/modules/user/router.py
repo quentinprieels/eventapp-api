@@ -1,5 +1,4 @@
 from typing import Annotated
-from datetime import timedelta
 from pydantic import ValidationError
 from minio import Minio
 from sqlalchemy.orm import Session
@@ -20,7 +19,7 @@ router = APIRouter(
 # User information routes
 @router.get("/me")
 def read_users_me(current_user: Annotated[UserMailModel, Depends(get_current_user)], db: Annotated[Session, Depends(get_global_db)]) -> UserBaseModel:
-    return user_crud.get_and_check_user_by_email(db, current_user.email)
+    return user_crud.get_user_by_email(db, current_user.email)
     
 @router.get("/profile_picture")
 def read_user_profile_picture(current_user: Annotated[UserMailModel, Depends(get_current_user)], db: Annotated[Session, Depends(get_global_db)], minio_db: Annotated[Minio, Depends(get_minio_db)]) -> StreamingResponse:
@@ -59,13 +58,7 @@ def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Annota
         form_data_user = UserLoginModel(email=form_data.username, password=form_data.password)
     except ValidationError as e:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=e.errors())
-    user = user_crud.login_user(db, form_data_user)
-    
-    # Create the access token
-    access_token_expires = timedelta(minutes=settings.jwt_expiration)
-    access_token_data = {"sub": user.email, "scopes": role_crud.get_user_global_roles_jwt_format(db, user.role)}
-    access_token = user_crud.create_access_token(data=access_token_data,expires_delta=access_token_expires)
-    return TokenBase(access_token=access_token, token_type="bearer")
+    return user_crud.login_user(db, form_data_user)
 
 # User deletion route
 @router.delete("/delete")

@@ -1,18 +1,14 @@
 import jwt
 from typing import Annotated
 from minio import Minio
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
 from fastapi import Depends
 from fastapi.security import SecurityScopes, OAuth2PasswordBearer
 
 from app.db.base import GlobalSessionLocal
 from app.core.config import settings
-from app.helpers.cache import LRUCache
 from app.modules.user.models import TokenData, UserMailModel
 from app.exceptions import CredentialsException
 
-engine_cache = LRUCache(settings.engine_cache_capacity)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
 
 def get_global_db():
@@ -21,24 +17,6 @@ def get_global_db():
         yield db
     finally:
         db.close()
-
-def get_event_db(event_db_name: str, db: Session = Depends(get_global_db)):
-    # Cache the engine for the event database
-    if event_db_name not in engine_cache:
-        # Check if the event database exists
-        # TODO: Implement this
-        
-        # Get the connection to the event database
-        event_db_url = f"{settings.database_url}/{event_db_name}"
-        event_engine = create_engine(event_db_url)
-        engine_cache[event_db_name] = sessionmaker(autocommit=False, autoflush=False, bind=event_engine)
-        
-    # Get the session to the event database
-    event_db = engine_cache[event_db_name]()
-    try:
-        yield event_db
-    finally:
-        event_db.close()
         
 def get_minio_db():
     minio_client = Minio(

@@ -11,4 +11,3 @@ GlobalSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=global
 
 # Base model for all database models
 GlobalBase = declarative_base() # Schema used for tables in global database
-EventBase = declarative_base()  # Schema used for tables in event database

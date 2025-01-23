@@ -6,13 +6,18 @@ password_field = Field(
     description="Password must meet complexity requirements"
 )
 
+# User information models
 class UserBaseModel(BaseModel):
     first_name: str
     last_name: str
     email: EmailStr
-    role: str
     profile_picture_key: str | None = None
     
+class UserRolelModel(UserBaseModel):
+    global_role_id: int
+    
+
+# User creation and update models
 class UserRegisterModel(BaseModel):
     first_name: str
     last_name: str
@@ -38,6 +43,8 @@ class UserUpdateRoleModel(BaseModel):
     email: EmailStr
     role: str
 
+
+# Token models
 class TokenBase(BaseModel):
     access_token: str
     token_type: str
