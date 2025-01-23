@@ -1,8 +1,0 @@
-﻿id,categorie,name,default_global,default_event,default_admin,parent_id,description,access
-1,global,super_admin,0,0,1,,Global application administrator,(i) Modify the role of any user (ii) Has a total and global access to all events
-2,global,super_user,0,0,0,1,Super user of the application,(i) Create a new event and obtain an admin role on it
-3,global,user,1,0,0,2,User of the application,(i) Modify its account data 
-4,event,admin,0,0,0,1,Administrator of an event,(i) Modify the event's role of any user that has access to its event (ii) Add/remove user to its event (iii) Can modify event's parameters (iv) Has a total and global access to its event
-5,event,super_organiser,0,0,0,3,Organiser of an event with senstive tasks allowed,(i) Can create/modify the tickets what has an impact on the tickets (ii) Has view/modify permission on all modules
-6,event,organiser,0,0,0,4,Organiser of an event,(i) Has view/modify permission on all modules except the one specific to the super_organiser
-7,event,volonteer,0,1,0,5,Volonteer who will help organiser for a specific tasks,(i) Read access on specific modules like scanning tikets (but not searching)

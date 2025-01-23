@@ -1,0 +1,4 @@
+name,parent_name,is_default,is_admin,description,access
+super_admin,,0,1,Global application administrator,(i) Modify the role of any user (ii) Has a total and global access to all events
+super_user,super_admin,0,0,Super user of the application,(i) Create a new event and obtain an admin role on it
+user,super_user,1,0,User of the application,(i) Modify its account data

@@ -1,0 +1,5 @@
+name,parent_name,is_default,is_admin,description,access
+admin,,0,1,Administrator of an event,(i) Modify the event's role of any user that has access to its event (ii) Add/remove user to its event (iii) Can modify event's parameters (iv) Has a total and global access to its event
+super_organiser,admin,0,0,Organiser of an event with senstive tasks allowed,(i) Can create/modify the tickets what has an impact on the tickets (ii) Has view/modify permission on all modules
+organiser,super_organiser,0,0,Organiser of an event,(i) Has view/modify permission on all modules except the one specific to the super_organiser
+volonteer,organiser,1,0,Volonteer who will help organiser for a specific tasks,(i) Read access on specific modules like scanning tikets (but not searching)
