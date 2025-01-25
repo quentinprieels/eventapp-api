@@ -27,13 +27,13 @@ class Settings(BaseSettings):
     jwt_expiration: int = 3600 * 6 # 6 hours
     jwt_algorithm: str = "HS256" # HMAC-SHA256
     
-    # User roles settings
-    global_roles_csv_path: str = "../resources/global_roles.csv"
-    event_roles_csv_path: str = "../resources/event_roles.csv"
-    
-    # User password settings
+    # User settings
     user_password_regex :str = r"^[A-Za-z\d@$!%*?&]{8,64}$" # Between 8 and 64 characters with at least one letter, one number and one special character
     user_profile_picture_max_size: int = 5 * 1024 * 1024  # 5 MB
+    
+    # Role settings
+    global_roles_csv_path: str = "../resources/global_roles.csv"
+    event_roles_csv_path: str = "../resources/event_roles.csv"
     
     class Config:
         env_file = ".env"

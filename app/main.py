@@ -6,6 +6,7 @@ from fastapi.responses import RedirectResponse
 
 from app.db.database import init_global_db, close_global_db, init_minio_db, load_roles_from_csv
 from app.modules.user.router import router as user_router
+from app.modules.event.router import router as event_router
 from app.core.config import settings
 from app.helpers.logs import StructuredLogger
 
@@ -70,3 +71,4 @@ def redirect_to_website():
 # INCLUDE ROUTERS #
 ###################
 app.include_router(user_router)
+app.include_router(event_router)

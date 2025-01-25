@@ -12,8 +12,9 @@ from fastapi.responses import StreamingResponse
 from app.exceptions import UserAlreadyExists, UserNotFound, InvalidPassword, RoleNotAssignable, InvalidImage, ImageNotFound
 from app.core.config import settings
 from app.modules.user.schemas import UserSchema
-from app.modules.user.models import UserBaseModel, UserRegisterModel, UserLoginModel, UserNamesModel, UserMailModel, UserUpdatePasswordModel, UserUpdateRoleModel, TokenBase
+from app.modules.user.models import UserBaseModel, UserDetailModel, UserRegisterModel, UserLoginModel, UserUpdateModel, UserUpdateRoleModel, TokenBase, TokenData
 import app.modules.role.crud as role_crud
+import app.modules.event.crud as event_crud
 
 # Password hashing and verification
 def _get_hashed_password(password: str) -> str:
@@ -25,13 +26,13 @@ def _verify_password(plain_password: str, hashed_password: str) -> bool:
 
 # User global roles management
 def _is_last_global_admin(db: Session, user: UserSchema) -> bool:
-    global_admin_role_id = role_crud.get_default_admin_role(db).id
+    global_admin_role_id = role_crud.get_global_admin_role(db).id
     is_user_global_admin = user.global_role_id == global_admin_role_id
     number_of_global_admins = db.query(UserSchema).filter(UserSchema.global_role_id == global_admin_role_id).count()
     return is_user_global_admin and number_of_global_admins == 1
 
 # JWT token creation
-def create_access_token(data: dict, expires_delta: timedelta) -> str:
+def _create_access_token(data: dict, expires_delta: timedelta) -> str:
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + expires_delta
     to_encode.update({"exp": expire})
@@ -49,27 +50,49 @@ def _get_and_check_user_by_email(db: Session, email: str) -> UserSchema:
     return db_user
 
 
-# User information
-def get_user_by_email(db: Session, email: str) -> UserBaseModel:
+# User getters
+def get_user_informations(db: Session, email: str) -> UserDetailModel:
     db_user = _get_and_check_user_by_email(db, email)
-    return UserBaseModel(**db_user.__dict__)
+    user_roles = role_crud.get_user_global_roles_jwt_format(db, db_user.global_role_id)
+    return UserDetailModel(**db_user.__dict__, global_roles=user_roles)
 
-def get_user_profile_picture(db: Session, minio_db: Minio, current_user: UserMailModel) -> UploadFile:
+def get_user_profile_picture(db: Session, minio_db: Minio, current_user: TokenData) -> UploadFile:
     db_user = _get_and_check_user_by_email(db, current_user.email)
     if not db_user.profile_picture_key:
         raise ImageNotFound()
     profile_picture = minio_db.get_object(settings.minio_bucket_name, db_user.profile_picture_key)
     return StreamingResponse(profile_picture, media_type=profile_picture.headers.get("Content-Type"))
 
-def update_user_names(db: Session, current_user: UserMailModel, updated_user: UserNamesModel) -> UserBaseModel:
+
+# User updates
+def update_user(db: Session, current_user: TokenData, updated_user: UserUpdateModel) -> UserBaseModel:
     db_user = _get_and_check_user_by_email(db, current_user.email)
-    if updated_user.first_name: db_user.first_name = updated_user.first_name
-    if updated_user.last_name: db_user.last_name = updated_user.last_name
+    
+    # Names update
+    if updated_user.first_name: 
+        db_user.first_name = updated_user.first_name
+    if updated_user.last_name: 
+        db_user.last_name = updated_user.last_name
+        
+    # Email update
+    if updated_user.email:
+        db_user_with_same_new_email = _get_user_by_email(db, updated_user.email)
+        if db_user_with_same_new_email:
+            raise UserAlreadyExists()
+        db_user.email = updated_user.email
+        
+    # Password update
+    if updated_user.current_password and updated_user.new_password:
+        if not _verify_password(updated_user.current_password, db_user.hashed_password):
+            raise InvalidPassword()
+        db_user.hashed_password = _get_hashed_password(updated_user.new_password)
+        
+    # Commit the changes
     db.commit()
     db.refresh(db_user)
     return UserBaseModel(**db_user.__dict__)
 
-async def update_user_profile_picture(db: Session, minio_db: Minio, current_user: UserMailModel, profile_picture: UploadFile) -> UserBaseModel:
+async def update_user_profile_picture(db: Session, minio_db: Minio, current_user: TokenData, profile_picture: UploadFile) -> UserBaseModel:
     # Check if the file is a valid image
     if not profile_picture.filename.lower().endswith((".png", ".jpg", ".jpeg")):
         raise InvalidImage("Only PNG and JPG files are allowed")
@@ -83,7 +106,7 @@ async def update_user_profile_picture(db: Session, minio_db: Minio, current_user
     
     # Process the image
     try:
-        profile_picture_key = f"{current_user.email}/{profile_picture.filename.replace('/', '')}"
+        profile_picture_key = f"users/{current_user.email}/{profile_picture.filename.replace('/', '')}"
         profile_picture_key = re.sub(r'[^a-zA-Z0-9/_.]', '', profile_picture_key).replace(" ", "_").lower()
         profile_picture_image = await profile_picture.read()    
         
@@ -98,25 +121,6 @@ async def update_user_profile_picture(db: Session, minio_db: Minio, current_user
         db.refresh(db_user)
     except S3Error:
         raise InvalidImage("Error while uploading the image")
-    return UserBaseModel(**db_user.__dict__)
-
-def update_user_email(db: Session, current_user: UserMailModel, updated_user: UserMailModel) -> UserBaseModel:
-    db_user = _get_and_check_user_by_email(db, current_user.email)
-    db_user_with_same_new_email = _get_user_by_email(db, updated_user.email)
-    if db_user_with_same_new_email:
-        raise UserAlreadyExists()
-    db_user.email = updated_user.email
-    db.commit()
-    db.refresh(db_user)
-    return UserBaseModel(**db_user.__dict__)
-
-def update_user_password(db: Session, current_user: UserMailModel, updated_user: UserUpdatePasswordModel) -> UserBaseModel:
-    db_user = _get_and_check_user_by_email(db, current_user.email)
-    if not _verify_password(updated_user.current_password, db_user.hashed_password):
-        raise InvalidPassword()
-    db_user.hashed_password = _get_hashed_password(updated_user.new_password)
-    db.commit()
-    db.refresh(db_user)
     return UserBaseModel(**db_user.__dict__)
 
 def update_user_role(db: Session, update_role_user: UserUpdateRoleModel) -> UserBaseModel:   
@@ -149,7 +153,7 @@ def create_user(db: Session, user: UserRegisterModel) -> UserBaseModel:
     
     # If the first user is created, assign the default admin role
     if not db.query(UserSchema).count():
-        db_user.global_role_id = role_crud.get_default_admin_role(db).id
+        db_user.global_role_id = role_crud.get_global_admin_role(db).id
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -157,19 +161,34 @@ def create_user(db: Session, user: UserRegisterModel) -> UserBaseModel:
 
 
 # User authentication
-def login_user(db: Session, user: UserLoginModel) -> TokenBase:
+def get_token_with_global_roles(db: Session, user: UserLoginModel) -> TokenBase:
     db_user = _get_and_check_user_by_email(db, user.email)
     if not _verify_password(user.password, db_user.hashed_password):
         raise InvalidPassword()
     
     access_token_expires = timedelta(minutes=settings.jwt_expiration)
     access_token_data = {"sub": user.email, "scopes": role_crud.get_user_global_roles_jwt_format(db, db_user.global_role_id)}
-    access_token = create_access_token(data=access_token_data,expires_delta=access_token_expires)
+    access_token = _create_access_token(data=access_token_data,expires_delta=access_token_expires)
+    return TokenBase(access_token=access_token, token_type="bearer")
+
+def get_token_with_global_and_event_roles(db: Session, current_user: TokenData, event_id: int) -> TokenBase:
+    db_user = _get_and_check_user_by_email(db, current_user.email)
+    
+    # JWT global informations
+    access_token_expires = timedelta(minutes=settings.jwt_expiration)
+    access_token_data = {"sub": current_user.email, "scopes": role_crud.get_user_global_roles_jwt_format(db, db_user.global_role_id)}
+    
+    # JWT event informations
+    event_user_roles = [role.id for role in event_crud._get_and_check_event_user_role(db, db_user.id, event_id)]
+    access_token_data["scopes"].extend(role_crud.get_user_event_roles_jwt_format(db, event_user_roles))
+    access_token_data["event_id"] = event_id
+    
+    access_token = _create_access_token(data=access_token_data,expires_delta=access_token_expires)
     return TokenBase(access_token=access_token, token_type="bearer")
 
 
 # User deletion
-def delete_user(db: Session, minio_db: Minio, current_user: UserMailModel) -> UserBaseModel:
+def delete_user(db: Session, minio_db: Minio, current_user: TokenData) -> UserBaseModel:
     db_user = _get_and_check_user_by_email(db, current_user.email)
     
     # Chek that the user is not the last admin

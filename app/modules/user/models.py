@@ -1,4 +1,6 @@
+from typing import Optional
 from pydantic import BaseModel, Field, EmailStr
+
 from app.core.config import settings
 
 password_field = Field(
@@ -11,13 +13,13 @@ class UserBaseModel(BaseModel):
     first_name: str
     last_name: str
     email: EmailStr
-    profile_picture_key: str | None = None
+    profile_picture_key: Optional[str] = None
     
-class UserRolelModel(UserBaseModel):
-    global_role_id: int
-    
+class UserDetailModel(UserBaseModel):
+    global_roles: list[str]
 
-# User creation and update models
+
+# User creation and login models
 class UserRegisterModel(BaseModel):
     first_name: str
     last_name: str
@@ -28,17 +30,23 @@ class UserLoginModel(BaseModel):
     email: EmailStr
     password: str = password_field
 
-class UserNamesModel(BaseModel):
-    first_name: str | None = None
-    last_name: str | None = None
-    
-class UserMailModel(BaseModel):
-    email: EmailStr
-    
-class UserUpdatePasswordModel(BaseModel):
-    current_password: str = password_field
-    new_password: str = password_field
-    
+
+# User update models
+class UserUpdateModel(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    current_password: Optional[str] = Field(
+        None,
+        pattern=settings.user_password_regex,
+        description="Current password required to update user information"
+    )
+    new_password: Optional[str] = Field(
+        None,
+        pattern=settings.user_password_regex,
+        description="New password must meet complexity requirements"
+    )
+
 class UserUpdateRoleModel(BaseModel):
     email: EmailStr
     role: str
@@ -50,5 +58,6 @@ class TokenBase(BaseModel):
     token_type: str
     
 class TokenData(BaseModel):
-    email: str
+    email: EmailStr
     roles: list[str]
+    event_id: Optional[int] = None
